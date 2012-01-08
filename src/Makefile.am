@@ -3,7 +3,7 @@ AM_CFLAGS = \
   -I$(top_srcdir)/contrib/jansson/src \
   @AM_CFLAGS@
 
-LIBS="-ljansson $LIBS"
+LIBS="-lc -ljansson $LIBS"
 
 lib_LIBRARIES = librapid.a
 

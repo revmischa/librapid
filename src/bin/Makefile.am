@@ -5,7 +5,7 @@ AM_CFLAGS = \
   -static
   @AM_CFLAGS@
 
-LIBS=-ljansson
+LIBS=-ljansson -lc
 
 bin_PROGRAMS = rapid_test
 

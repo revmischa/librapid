@@ -4,6 +4,10 @@
 AC_PREREQ([2.68])
 AC_INIT([librapid], [0.1], [mischa@int80.biz])
 
+# support --target option for cross-compiling
+AC_CANONICAL_SYSTEM
+AC_ARG_PROGRAM
+
 AC_CONFIG_SRCDIR([src/rapid_api.h])
 
 AC_CONFIG_SUBDIRS([contrib/jansson])

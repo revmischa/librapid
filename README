@@ -1,7 +1,18 @@
-To build the git checkout:
-
+## To build the git checkout:
+```
 git submodule init
 git submodule update
-./autogen.sh
+cd contrib/jansson
+autoreconf -vi
+cd ../../
+autoreconf -vi
+automake -a -c
 ./configure
 make
+```
+
+## Cross-compiling:
+This library is designed for use in embedded systems. If you want to cross-compile it, try something along the lines of:
+`./configure --build=x86_64-linux-gnu --host=mips-openwrt-linux`
+
+You will need to have the appropriate library and executable search paths in $PATH and $LDFLAGS.
