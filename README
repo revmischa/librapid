@@ -1,0 +1,7 @@
+To build the git checkout:
+
+git submodule init
+git submodule update
+./autogen.sh
+./configure
+make
