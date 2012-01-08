@@ -2,10 +2,7 @@
 ```
 git submodule init
 git submodule update
-cd contrib/jansson
-autoreconf -vi
-cd ../../
-autoreconf -vi
+autoreconf -i
 automake -a -c
 ./configure
 make
