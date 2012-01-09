@@ -1,17 +1,17 @@
-#ifndef __RAPID_API_H__
-#define __RAPID_API_H__
+#ifndef __RAPID_MESSAGE_H__
+#define __RAPID_MESSAGE_H__
 
 #include "jansson.h"
 #include <string.h>	// memcpy
 #include <stdlib.h>	// malloc
 
 typedef struct {
-    char *command;
-	json_t *params;
+  char *command;
+  json_t *params;
 
-	short params_copied;
-	short command_copied;
-	short params_ref;
+  short params_copied;
+  short command_copied;
+  short params_ref;
 } rapid_message;
 
 rapid_message* rapid_alloc_message(void);

@@ -8,7 +8,7 @@ AC_INIT([librapid], [0.1], [mischa@int80.biz])
 AC_CANONICAL_SYSTEM
 AC_ARG_PROGRAM
 
-AC_CONFIG_SRCDIR([src/rapid_api.h])
+AC_CONFIG_SRCDIR([src/api.h])
 
 AC_CONFIG_SUBDIRS([contrib/jansson])
 
