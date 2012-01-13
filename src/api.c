@@ -12,6 +12,7 @@ rapid_api_ctx* rapid_api_alloc_context(void) {
   ctx->server_address = NULL;
   ctx->server_port = RAPID_API_DEFAULT_PORT;
   ctx->socket = 0;
+  ctx->json_buf = NULL;
   
   return ctx;
 }
@@ -20,6 +21,11 @@ void rapid_api_free_context(rapid_api_ctx* ctx) {
   if (ctx->server_address) {
     free(ctx->server_address);
     ctx->server_address = NULL;
+  }
+
+  if (ctx->json_buf) {
+    free(ctx->json_buf);
+    ctx->json_buf = NULL;
   }
 
   free(ctx);
@@ -89,22 +95,26 @@ void rapid_api_disconnect(rapid_api_ctx *ctx) {
 }
 
 // poll socket, see if there is data to read
+// nonblocking
+// returns false on error
 int rapid_api_read(rapid_api_ctx *ctx) {
   int sock = ctx->socket;
   if (! sock)
     return 0;
 
-  uint32_t bufsize = 1500;
+  uint32_t bufsize = RAPID_API_READ_BUF_SIZE;
   uint8_t *buf = malloc(bufsize);
 
+  // read from socket
   ssize_t bytes_read;
   bytes_read = recv(sock, buf, bufsize, 0);
   if (bytes_read == -1) {
-    // nothing to read?
     if (errno == EAGAIN) {
+      // no error, nothing to rad
       free(buf);
       return 1;
     } else {
+      // read error
       perror("Error reading from socket");
       rapid_api_disconnect(ctx);
       free(buf);
@@ -112,6 +122,7 @@ int rapid_api_read(rapid_api_ctx *ctx) {
     }
   }
 
+  // i don't think this should ever happen
   if (! bytes_read) {
     printf("Read 0 bytes!\n");
     free(buf);
@@ -130,20 +141,35 @@ int rapid_api_read(rapid_api_ctx *ctx) {
 // parse incoming data, call registered callbacks
 void rapid_api_read_handler(rapid_api_ctx *ctx, uint8_t *read_buf, ssize_t bytes_read) {
 
-  // buffer to hold json + NUL termination
-  // FIXME: need to handle incremental parsing
+  // handle incremental parsing of JSON
+  if (ctx->json_buf) {
+    // append what we've read
+    ctx->json_buf = realloc(ctx->json_buf, ctx->json_buf_len + bytes_read);
+    memcpy((ctx->json_buf + ctx->json_buf_len), read_buf, bytes_read);
+    ctx->json_buf_len += bytes_read;
+  } else {
+    ctx->json_buf = malloc(bytes_read);
+    ctx->json_buf_len = bytes_read;
+    memcpy(ctx->json_buf, read_buf, bytes_read);
+  }
   
-  printf("Read data: %s\n", read_buf);
-
   json_t *root;
   json_error_t *json_err;
   // JSON_DISABLE_EOF_CHECK == allow extra data at the end of a valid JSON object
-  root = json_loadb(read_buf, bytes_read, JSON_DISABLE_EOF_CHECK, json_err);
+  root = json_loadb(ctx->json_buf, ctx->json_buf_len, JSON_DISABLE_EOF_CHECK, json_err);
 
   if (root == NULL) {
     // decoding failed
-    printf("Failed to decode JSON\n");
+    // probably ok
+    //printf("Failed to decode JSON\n");
+    return;
   }
+
+  // decoding success. remove the parsed json from the buffer
+  // ????
+  free(ctx->json_buf);
+  ctx->json_buf = NULL;
+  ctx->json_buf_len = 0;
 
   // we seem to have a valid JSON object now. let's turn it into a rapid message
   rapid_message *msg = rapid_alloc_message();

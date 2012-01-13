@@ -11,8 +11,6 @@ short rapid_parse_message(json_t *json, rapid_message *msg) {
   if (command == NULL || ! json_is_string(command))
     return 0;
 
-  printf("command=%X\n", command);
-
   params = json_object_get(json, "params");
 	
   // cool
@@ -32,7 +30,6 @@ rapid_message* rapid_alloc_message(void) {
     printf("failed to alloc msg!\n");
     return NULL;
   }
-  printf("alloc msg=%lX, size=%u\n", msg, sizeof(rapid_message));
 													 
   msg->command = NULL;
   msg->params  = NULL;
@@ -69,7 +66,6 @@ void rapid_set_message_command_copy(rapid_message *msg, const char *command) {
 	
   copy = strdup(command);
   msg->command = copy;
-  printf("copied %X to %X, s1=%s, s2=%s, size=%u\n", command, msg->command, command, msg->command, strlen(msg->command));
 
   msg->command_copied = 1;
 }
