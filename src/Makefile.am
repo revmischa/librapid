@@ -19,4 +19,4 @@ librapid_a_HEADERS =    \
 librapid_a_SOURCES =    \
                         $(librapid_a_HEADERS) \
                         api.c \
-                        message.h
+                        message.c

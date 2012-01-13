@@ -69,6 +69,12 @@ int rapid_api_connect(rapid_api_ctx *ctx) {
     return 0;
   }
 
+  // set socket nonblocking
+  int flags;
+  if ((flags = fcntl(sock, F_GETFL, 0)) == -1)
+    flags = 0;
+  fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+  
   ctx->socket = sock;
 
   return 1;
@@ -79,4 +85,74 @@ void rapid_api_disconnect(rapid_api_ctx *ctx) {
     return;
 
   shutdown(ctx->socket, SHUT_WR); // no more writes
+  ctx->socket = 0;
 }
+
+// poll socket, see if there is data to read
+int rapid_api_read(rapid_api_ctx *ctx) {
+  int sock = ctx->socket;
+  if (! sock)
+    return 0;
+
+  uint32_t bufsize = 1500;
+  uint8_t *buf = malloc(bufsize);
+
+  ssize_t bytes_read;
+  bytes_read = recv(sock, buf, bufsize, 0);
+  if (bytes_read == -1) {
+    // nothing to read?
+    if (errno == EAGAIN) {
+      free(buf);
+      return 1;
+    } else {
+      perror("Error reading from socket");
+      rapid_api_disconnect(ctx);
+      free(buf);
+      return 0;
+    }
+  }
+
+  if (! bytes_read) {
+    printf("Read 0 bytes!\n");
+    free(buf);
+    return 0;
+  }
+
+  // we've read some data, process it
+  rapid_api_read_handler(ctx, buf, bytes_read);
+
+  free(buf);
+
+  return 1;
+}
+
+// called when we've read some data
+// parse incoming data, call registered callbacks
+void rapid_api_read_handler(rapid_api_ctx *ctx, uint8_t *read_buf, ssize_t bytes_read) {
+
+  // buffer to hold json + NUL termination
+  // FIXME: need to handle incremental parsing
+  
+  printf("Read data: %s\n", read_buf);
+
+  json_t *root;
+  json_error_t *json_err;
+  // JSON_DISABLE_EOF_CHECK == allow extra data at the end of a valid JSON object
+  root = json_loadb(read_buf, bytes_read, JSON_DISABLE_EOF_CHECK, json_err);
+
+  if (root == NULL) {
+    // decoding failed
+    printf("Failed to decode JSON\n");
+  }
+
+  // we seem to have a valid JSON object now. let's turn it into a rapid message
+  rapid_message *msg = rapid_alloc_message();
+  if (rapid_parse_message(root, msg)) {
+    printf("Got message with command: %s\n", msg->command);
+  }
+
+  rapid_free_message(msg);
+}
+
+    
+    

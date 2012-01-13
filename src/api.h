@@ -7,6 +7,10 @@
 #include <arpa/inet.h>
 #include <stdio.h>
 #include <errno.h>
+#include <fcntl.h>
+
+#include "message.h"
+#include "jansson.h"
 
 static const unsigned short RAPID_API_DEFAULT_PORT = 6000;
 
