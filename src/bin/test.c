@@ -17,10 +17,10 @@ int main() {
   }
 
   rapid_api_disconnect(ctx);
+  rapid_api_free_context(ctx);
 }
 
 void read_loop(rapid_api_ctx *ctx) {
-  while (1) {
-    rapid_api_read(ctx);
-  }
+  while (rapid_api_read(ctx))
+    ;
 }

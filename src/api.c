@@ -110,7 +110,7 @@ int rapid_api_read(rapid_api_ctx *ctx) {
   bytes_read = recv(sock, buf, bufsize, 0);
   if (bytes_read == -1) {
     if (errno == EAGAIN) {
-      // no error, nothing to rad
+      // no error, nothing to read
       free(buf);
       return 1;
     } else {
@@ -122,9 +122,10 @@ int rapid_api_read(rapid_api_ctx *ctx) {
     }
   }
 
-  // i don't think this should ever happen
   if (! bytes_read) {
-    printf("Read 0 bytes!\n");
+    // got disconnected
+    perror("Failed to read any data from socket, disconnected");
+    rapid_api_disconnect(ctx);
     free(buf);
     return 0;
   }
@@ -153,31 +154,50 @@ void rapid_api_read_handler(rapid_api_ctx *ctx, uint8_t *read_buf, ssize_t bytes
     memcpy(ctx->json_buf, read_buf, bytes_read);
   }
   
+  // debug
+  char *s = malloc(ctx->json_buf_len + 1);
+  memcpy(s, ctx->json_buf, ctx->json_buf_len);
+  s[ctx->json_buf_len] = '\0';
+  printf("json %u: '%s'\n", ctx->json_buf_len, s);
+
+  // decode JSON text
   json_t *root;
-  json_error_t *json_err;
+  json_error_t json_err;
   // JSON_DISABLE_EOF_CHECK == allow extra data at the end of a valid JSON object
-  root = json_loadb(ctx->json_buf, ctx->json_buf_len, JSON_DISABLE_EOF_CHECK, json_err);
+  root = json_loadb(ctx->json_buf, ctx->json_buf_len, JSON_DISABLE_EOF_CHECK, &json_err);
 
   if (root == NULL) {
     // decoding failed
-    // probably ok
-    //printf("Failed to decode JSON\n");
+    // probably ok, just incomplete
+    // printf("Failed to decode JSON\n");
     return;
   }
 
   // decoding success. remove the parsed json from the buffer
-  // ????
-  free(ctx->json_buf);
-  ctx->json_buf = NULL;
-  ctx->json_buf_len = 0;
-
+  // number of bytes decoded lives in json_err.position
+  // https://github.com/akheron/jansson/issues/49
+  size_t bytes_decoded = json_err.position;
+  if (bytes_decoded < ctx->json_buf_len) {
+    // remove decoded bytes from front of buffer
+    size_t remaining_bytes = ctx->json_buf_len - bytes_decoded;    
+    memmove(ctx->json_buf, ctx->json_buf + bytes_decoded, remaining_bytes);
+    ctx->json_buf = realloc(ctx->json_buf, remaining_bytes);
+    ctx->json_buf_len = remaining_bytes;
+  } else {
+    // done with json buffer, nothing left
+    free(ctx->json_buf);
+    ctx->json_buf = NULL;
+    ctx->json_buf_len = 0;
+  }
+  
   // we seem to have a valid JSON object now. let's turn it into a rapid message
   rapid_message *msg = rapid_alloc_message();
   if (rapid_parse_message(root, msg)) {
     printf("Got message with command: %s\n", msg->command);
   }
-
   rapid_free_message(msg);
+  
+  json_decref(root);
 }
 
     

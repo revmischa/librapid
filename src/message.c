@@ -21,6 +21,10 @@ short rapid_parse_message(json_t *json, rapid_message *msg) {
     //rapid_set_message_params_ref(msg, params);
   }
 
+  // we are using this object. please don't make it vanish.
+  msg->root = json;
+  json_incref(json);
+
   return 1;	
 }						
 
@@ -30,7 +34,8 @@ rapid_message* rapid_alloc_message(void) {
     printf("failed to alloc msg!\n");
     return NULL;
   }
-													 
+
+  msg->root = NULL;
   msg->command = NULL;
   msg->params  = NULL;
   msg->params_copied  = 0;
@@ -45,6 +50,10 @@ void rapid_free_message(rapid_message *msg) {
     free(msg->command);
 
   rapid_message_free_params(msg);
+
+  if (msg->root)
+    json_decref(msg->root);
+  msg->root = NULL;
 
   free(msg);
 }

@@ -16,7 +16,7 @@
 static const unsigned short RAPID_API_DEFAULT_PORT = 6000;
 
 // how many bytes to try to read at a time
-static const unsigned short RAPID_API_READ_BUF_SIZE = 1500;
+static const unsigned short RAPID_API_READ_BUF_SIZE = 1450;
 
 typedef struct {
   char *server_address;

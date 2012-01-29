@@ -7,7 +7,8 @@
 
 typedef struct {
   char *command;
-  json_t *params;
+  json_t *root;   // the json object that represents a message
+  json_t *params; // points at params in root
 
   short params_copied;
   short command_copied;
